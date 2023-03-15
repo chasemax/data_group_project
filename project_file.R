@@ -1,6 +1,6 @@
 library(tidyverse)
 
-team_results <- read_csv("data_group_project/data/MRegularSeasonDetailedResults.csv")
+team_results <- read_csv("https://byu.box.com/shared/static/mmsaiq1tfo4mfd4zvrbdxppsaenta331.csv")
 
 team_results %>%
   mutate(GameID = row_number()) %>%
