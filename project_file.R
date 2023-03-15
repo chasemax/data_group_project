@@ -1,8 +1,13 @@
 library(tidyverse)
 
 team_results <- read_csv("https://byu.box.com/shared/static/mmsaiq1tfo4mfd4zvrbdxppsaenta331.csv")
+team_conferences <- read_csv("data_group_project/data/MTeamConferences.csv")
+conferences <- read_csv("data_group_project/data/Conferences.csv")
+seeds <- read_csv("data_group_project/data/MNCAATourneySeeds.csv")
+tourney_results <- read_csv("data_group_project/data/MNCAATourneyCompactResults.csv")
 
-team_results %>%
+
+game_team_results <- team_results %>%
   mutate(GameID = row_number()) %>%
   select(-WLoc, -DayNum, -NumOT) %>%
   pivot_longer(
@@ -23,3 +28,37 @@ team_results %>%
     names_from = Stat,
     values_from = StatValue
   )
+
+seeds_clean <- seeds %>%
+  mutate(Seed = parse_number(Seed))
+
+team_season_stats <- game_team_results %>%
+  group_by(TeamID, Season) %>%
+  summarize(across(Score:PF, ~mean(.x))) %>%
+  ungroup() %>%
+  inner_join(team_conferences, by = c('Season' = 'Season', 'TeamID' = 'TeamID')) %>%
+  inner_join(conferences, by = c('ConfAbbrev' = 'ConfAbbrev')) %>%
+  select(-ConfAbbrev) %>%
+  rename(Conference = Description) %>%
+  left_join(seeds_clean, by = c('Season' = 'Season', 'TeamID' = 'TeamID'))
+
+set.seed(42)
+
+shuffled_t_results <- tourney_results %>%
+  filter(Season >= 2003) %>%
+  select(-DayNum, -WScore, -LScore, -WLoc, -NumOT) %>%
+  mutate(GameID = row_number()) %>%
+  mutate(FirstTeam = runif(nrow(.))) %>%
+  mutate(Team1ID = if_else(FirstTeam > 0.5, WTeamID, LTeamID), 
+         Team2ID = if_else(FirstTeam <= 0.5, WTeamID, LTeamID),
+         Team1Won = if_else(FirstTeam > 0.5, 1, 0)
+  ) %>%
+  select(-WTeamID, -LTeamID, -FirstTeam)
+
+ready_to_model <- shuffled_t_results %>%
+  left_join(team_season_stats, by = c('Season' = 'Season', 'Team1ID' = 'TeamID')) %>%
+  left_join(team_season_stats, by = c('Season' = 'Season', 'Team2ID' = 'TeamID'), suffix = c(".1", ".2")) %>%
+  janitor::clean_names()
+
+
+
