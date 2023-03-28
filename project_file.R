@@ -61,4 +61,26 @@ ready_to_model <- shuffled_t_results %>%
   janitor::clean_names()
 
 
+library(caret)
 
+predictions <- ready_to_model %>% 
+  mutate(predicted=if_else(seed_1 >= seed_2, 0, 1)) %>% 
+  select(predicted, team1won) %>% 
+  rename(actual=team1won)
+
+ready_to_model %>% 
+  mutate(predicted=if_else(seed_1 >= seed_2, 0, 1)) %>% 
+  select(seed_1, seed_2, predicted, team1won) %>% 
+  rename(actual=team1won)
+
+predictions
+
+cm <- table(predictions$predicted, predictions$actual)
+
+accuracy <- sum(cm[1], cm[4]) / sum(cm[1:4])
+precision <- cm[4] / sum(cm[4], cm[2])
+sensitivity <- cm[4] / sum(cm[4], cm[3])
+fscore <- (2 * (sensitivity * precision))/(sensitivity + precision)
+specificity <- cm[1] / sum(cm[1], cm[2])
+
+accuracy
